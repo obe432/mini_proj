@@ -1,0 +1,197 @@
+---
+title: "dplyr"
+author: "ricardondata"
+date: "2024-10-25"
+output: html_document
+   coding_folding: "show"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message= FALSE)
+```
+
+```{r Load Labraries}
+#install.package(tidyverse)
+#install.package(sjlabelle)
+#install.package(sdcTable)
+#install.package(sdcHierarchies)
+library(tidyverse) #This will include the "dplyr" package
+library(dplyr)
+library(tidyr)
+library(sjlabelled)
+library(sdcTable)
+library(sdcHierarchies)
+```
+
+
+```{r load labrary fo ghstat}
+remotes::install_github("https://github.com/agyei-boadisly/gssStatsBank")
+```
+
+
+```{r load data}
+ View(phc_data)
+```
+
+
+# Selecting the the specific variable for the measuring access to housing using the following indicators #
+```{r Accessing the housing }
+
+access_housing<-phc_data %>% 
+  select(nqid, pid, region, urbrur, totpopn, restype, weight, a11c, a11d, h01, h08a, h08b, h05, h07a, h06, h10, p02, p12b, p16, p17)
+
+access_housing
+  
+```
+### Note: just the characteristics of the Head "a11c" of Household ###
+
+### tenureship (h05) and Sex (a11d) ###  
+
+# "select()" the type of variable  we want to use 
+# "mutate()" the change the variable types into labels
+# note: just the categorical variables (dummy), so that we can see the tyoe name 
+```{r }
+tenure_ship <- access_housing %>% 
+  select(nqid, pid, region, urbrur, weight, a11d, a11c, totpopn, restype, h05) %>% 
+  mutate(across(c(region, urbrur, a11c, a11d, h05, restype), sjlabelled::as_label))
+tenure_ship
+
+```
+
+
+
+```{r Selecting the the Head of the household}
+
+tenure_ship_0 <- tenure_ship %>% 
+  filter(a11c == "Head") %>% 
+  mutate(ownership_type = case_when(h05 %in% c("Owner occupied", "Renting", "Rent-free") ~ "Secure tenancy", TRUE ~ "Not secure tenancy"),
+         loc2 = factor(urbrur, levels = c("Urban", "Rural")),
+         sex = factor(a11d, levels = c("Male", "Female"))) %>% 
+  mutate(ownership_type = factor(ownership_type, levels = c("Secure tenancy", "Not secure tenancy")))
+tenure_ship_0
+```
+
+
+```{r ghstat package}
+aa <- ghstats::process_data(tenure_ship_0, 
+                      var_names = c("ownership_type", "urbrur", "a11d"),
+                      var_totals = c("Total", "All localities", "Both sexes"),
+                      var_display_names = c("Tenancy agreement", "Locality type", "Sex"),
+                      weight_var = "weight",
+                      summary_type = "percent"
+)
+
+aa
+
+```
+
+
+```{r}
+
+tenure_ship_0 %>% 
+  group_by(ownership_type, a11d, urbrur) 
+
+```
+
+
+
+
+### Ownership of housing (h06) and Sex(a11d)  ###
+
+```{r}
+ownership_of_house <- access_housing %>% 
+  select(nqid, pid, region, urbrur, weight, a11d, a11c, totpopn, restype, h06) %>% 
+  mutate(across(c(region, urbrur, a11c, a11d, h06, restype), sjlabelled::as_label))
+ownership_of_house
+```
+
+
+```{r}
+ownership_of_house_1 <- ownership_of_house %>% 
+  filter(a11c == "Head") %>% 
+  mutate(
+    specific_owner_house = case_when(
+      h06 %in% c("Family property", "Relative not household member") ~ "Family/Relative",
+      h06 %in% c("Other private individual", "Other private agency", "Private employer", "Estate developer") ~ "Private",
+      h06 %in% c("Public/Government", "Other") ~ "Public/Other",
+      is.na(h06) ~ "NA",
+      TRUE ~ "Unknown"
+      ),
+    loc2 = factor(urbrur, levels = c("Urban", "Rural")),
+    sex = factor(a11d, levels = c("Male", "Female"))
+    ) %>% 
+  mutate(specific_owner_house = factor(specific_owner_house, levels = c("Family/Relative", "Private", "Public/Other", "NA", "Unknown"))
+  )
+
+ownership_of_house_1
+```
+
+```{r ghstat package}
+owners <- ghstats::process_data(ownership_of_house_1, 
+                      var_names = c("specific_owner_house", "urbrur", "a11d"),
+                      var_totals = c("Total", "All localities", "Both sexes"),
+                      var_display_names = c("Owns the Place", "Locality type", "Sex"),
+                      weight_var = "weight",
+                      summary_type = "percent"
+)
+
+owners
+```
+
+
+
+```{r}
+owners_1<- ownership_of_house_1 %>% 
+  group_by(specific_owner_house, a11d, urbrur) 
+owners_1
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
